@@ -11,6 +11,8 @@ FROM base AS build
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
+# The schema is needed during install: the API's postinstall runs `prisma generate`.
+COPY apps/api/prisma apps/api/prisma
 RUN npm ci
 COPY . .
 # Optional: public repository URL shown in the footer (read by Vite at build time).
@@ -25,7 +27,8 @@ COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
 COPY apps/api/prisma apps/api/prisma
 # Production dependencies only, plus the Prisma CLI needed to run migrations on start.
-RUN npm ci --omit=dev --workspace=apps/api --include-workspace-root=false \
+# --ignore-scripts: the postinstall needs the Prisma CLI, which is installed explicitly below.
+RUN npm ci --omit=dev --ignore-scripts --workspace=apps/api --include-workspace-root=false \
   && npm install --no-save --workspace=apps/api prisma@6.19.3 \
   && npx --workspace=apps/api prisma generate \
   && npm cache clean --force
