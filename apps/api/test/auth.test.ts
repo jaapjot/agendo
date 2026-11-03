@@ -207,6 +207,11 @@ describe('refresh token rotation', () => {
     expect(afterAttack.status).toBe(401);
   });
 
+  it('answers 204 (not an error) when there is no session cookie', async () => {
+    const res = await request(app).post('/api/auth/refresh');
+    expect(res.status).toBe(204);
+  });
+
   it('logout revokes the refresh token', async () => {
     const reg = await request(app)
       .post('/api/auth/register')

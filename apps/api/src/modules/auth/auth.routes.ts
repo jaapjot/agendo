@@ -50,6 +50,11 @@ authRouter.post('/login', credentialsLimiter, async (req, res) => {
 });
 
 authRouter.post('/refresh', async (req, res) => {
+  // No cookie simply means "not logged in" (a normal state for visitors), not an error.
+  if (!req.cookies?.[REFRESH_COOKIE]) {
+    res.status(204).end();
+    return;
+  }
   try {
     sendSession(res, await authService.refresh(req.cookies?.[REFRESH_COOKIE]));
   } catch (error) {

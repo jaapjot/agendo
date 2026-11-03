@@ -46,15 +46,13 @@ describe('public professional pages', () => {
   });
 
   it('hides professionals who cannot be booked yet (no services)', async () => {
-    await request(app)
-      .post('/api/auth/register')
-      .send({
-        name: 'New',
-        email: 'new@example.com',
-        password: 'password123',
-        role: 'PROFESSIONAL',
-        businessName: 'Empty',
-      });
+    await request(app).post('/api/auth/register').send({
+      name: 'New',
+      email: 'new@example.com',
+      password: 'password123',
+      role: 'PROFESSIONAL',
+      businessName: 'Empty',
+    });
     const res = await request(app).get('/api/professionals');
     expect(res.body.professionals).toHaveLength(1);
   });
