@@ -1,0 +1,32 @@
+# Runs the whole app (database + API serving the built frontend) with one command:
+#   docker compose up --build
+# Then open http://localhost:4000
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: agendo
+      POSTGRES_PASSWORD: agendo
+      POSTGRES_DB: agendo
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U agendo']
+      interval: 5s
+      retries: 10
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://agendo:agendo@db:5432/agendo?schema=public
+      # Local use only. Set a real random secret in any deployed environment.
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-local-docker-secret-change-me-0123456789}
+      PORT: 4000
+    ports:
+      - '4000:4000'
+
+volumes:
+  db-data:
