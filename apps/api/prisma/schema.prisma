@@ -1,0 +1,150 @@
+// Agendo data model.
+// Times are stored as UTC timestamps (timestamptz). Weekly working hours are stored as
+// "minutes since local midnight" in the professional's own time zone, because a schedule
+// like "Mondays 9:00-13:00" is a wall-clock rule, not a fixed instant.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  PROFESSIONAL
+  CLIENT
+}
+
+enum AppointmentStatus {
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String   @db.VarChar(80)
+  email        String   @unique @db.VarChar(254)
+  passwordHash String   @map("password_hash")
+  role         Role
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  professionalProfile ProfessionalProfile?
+  refreshTokens       RefreshToken[]
+  clientAppointments  Appointment[]        @relation("ClientAppointments")
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  // Only a SHA-256 hash is stored: a database leak does not expose usable tokens.
+  tokenHash String    @unique @map("token_hash")
+  // Every token issued by rotating the same login shares a family, so reuse of an old
+  // token can revoke the whole chain.
+  familyId  String    @map("family_id") @db.Uuid
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(3)
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([familyId])
+  @@map("refresh_tokens")
+}
+
+model ProfessionalProfile {
+  userId                  String   @id @map("user_id") @db.Uuid
+  slug                    String   @unique @db.VarChar(60)
+  businessName            String   @map("business_name") @db.VarChar(80)
+  description             String   @default("") @db.VarChar(500)
+  timezone                String   @default("America/Argentina/Buenos_Aires") @db.VarChar(64)
+  // Business rules the professional controls.
+  minNoticeMinutes        Int      @default(60) @map("min_notice_minutes")
+  bookingWindowDays       Int      @default(30) @map("booking_window_days")
+  cancellationNoticeHours Int      @default(2) @map("cancellation_notice_hours")
+  createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  services     Service[]
+  availability AvailabilityRule[]
+  timeOff      TimeOff[]
+  appointments Appointment[]
+
+  @@map("professional_profiles")
+}
+
+model Service {
+  id              String   @id @default(uuid()) @db.Uuid
+  professionalId  String   @map("professional_id") @db.Uuid
+  name            String   @db.VarChar(80)
+  description     String   @default("") @db.VarChar(300)
+  durationMinutes Int      @map("duration_minutes")
+  // Money is stored as an integer number of cents to avoid floating point rounding errors.
+  priceCents      Int      @map("price_cents")
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  professional ProfessionalProfile @relation(fields: [professionalId], references: [userId], onDelete: Cascade)
+  appointments Appointment[]
+
+  @@index([professionalId])
+  @@map("services")
+}
+
+model AvailabilityRule {
+  id             String @id @default(uuid()) @db.Uuid
+  professionalId String @map("professional_id") @db.Uuid
+  // 0 = Sunday ... 6 = Saturday (same convention as JavaScript's Date#getDay).
+  weekday        Int    @db.SmallInt
+  startMinute    Int    @map("start_minute") @db.SmallInt
+  endMinute      Int    @map("end_minute") @db.SmallInt
+
+  professional ProfessionalProfile @relation(fields: [professionalId], references: [userId], onDelete: Cascade)
+
+  @@index([professionalId, weekday])
+  @@map("availability_rules")
+}
+
+model TimeOff {
+  id             String   @id @default(uuid()) @db.Uuid
+  professionalId String   @map("professional_id") @db.Uuid
+  startsAt       DateTime @map("starts_at") @db.Timestamptz(3)
+  endsAt         DateTime @map("ends_at") @db.Timestamptz(3)
+  reason         String   @default("") @db.VarChar(120)
+
+  professional ProfessionalProfile @relation(fields: [professionalId], references: [userId], onDelete: Cascade)
+
+  @@index([professionalId, startsAt])
+  @@map("time_off")
+}
+
+model Appointment {
+  id             String            @id @default(uuid()) @db.Uuid
+  professionalId String            @map("professional_id") @db.Uuid
+  clientId       String            @map("client_id") @db.Uuid
+  serviceId      String            @map("service_id") @db.Uuid
+  startsAt       DateTime          @map("starts_at") @db.Timestamptz(3)
+  endsAt         DateTime          @map("ends_at") @db.Timestamptz(3)
+  status         AppointmentStatus @default(CONFIRMED)
+  // Snapshot of the price at booking time: later price changes must not rewrite history.
+  priceCents     Int               @map("price_cents")
+  notes          String            @default("") @db.VarChar(300)
+  cancelledBy    Role?             @map("cancelled_by")
+  createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  professional ProfessionalProfile @relation(fields: [professionalId], references: [userId], onDelete: Cascade)
+  client       User                @relation("ClientAppointments", fields: [clientId], references: [id], onDelete: Cascade)
+  service      Service             @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+
+  // The no-double-booking guarantee is an exclusion constraint added in the SQL migration
+  // (Prisma's schema language cannot express it). See migrations/*_init/migration.sql.
+  @@index([professionalId, startsAt])
+  @@index([clientId, startsAt])
+  @@map("appointments")
+}
