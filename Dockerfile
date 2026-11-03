@@ -13,6 +13,9 @@ COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
 RUN npm ci
 COPY . .
+# Optional: public repository URL shown in the footer (read by Vite at build time).
+ARG VITE_REPO_URL=
+ENV VITE_REPO_URL=$VITE_REPO_URL
 RUN npm run build
 
 FROM base AS production

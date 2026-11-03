@@ -8,6 +8,8 @@ services:
       POSTGRES_USER: agendo
       POSTGRES_PASSWORD: agendo
       POSTGRES_DB: agendo
+    ports:
+      - '5433:5432' # exposed so you can seed or inspect the database from your machine
     volumes:
       - db-data:/var/lib/postgresql/data
     healthcheck:
