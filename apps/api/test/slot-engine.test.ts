@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { computeAvailableSlots, isSlotAvailable, type SlotQuery } from '../src/modules/scheduling/slot-engine.js';
+import {
+  computeAvailableSlots,
+  isSlotAvailable,
+  type SlotQuery,
+} from '../src/modules/scheduling/slot-engine.js';
 
 const TZ = 'America/Argentina/Buenos_Aires'; // UTC-3, no daylight saving time.
 
@@ -25,7 +29,15 @@ describe('computeAvailableSlots', () => {
   it('generates 15-minute steps that fit entirely inside working hours', () => {
     const slots = computeAvailableSlots(baseQuery);
     expect(localTimes(slots)).toEqual([
-      '09:00', '09:15', '09:30', '09:45', '10:00', '10:15', '10:30', '10:45', '11:00',
+      '09:00',
+      '09:15',
+      '09:30',
+      '09:45',
+      '10:00',
+      '10:15',
+      '10:30',
+      '10:45',
+      '11:00',
     ]);
   });
 

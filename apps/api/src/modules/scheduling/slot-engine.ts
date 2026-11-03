@@ -93,12 +93,16 @@ export function computeAvailableSlots(query: SlotQuery): Date[] {
 export function isSlotAvailable(query: Omit<SlotQuery, 'date'>, start: Date): boolean {
   const date = DateTime.fromJSDate(start, { zone: query.timezone }).toISODate();
   if (!date) return false;
-  return computeAvailableSlots({ ...query, date }).some((slot) => slot.getTime() === start.getTime());
+  return computeAvailableSlots({ ...query, date }).some(
+    (slot) => slot.getTime() === start.getTime(),
+  );
 }
 
 /** Formats minutes since midnight as HH:mm (used in validation messages). */
 export function minutesToTime(minutes: number): string {
-  const hours = Math.floor(minutes / 60).toString().padStart(2, '0');
+  const hours = Math.floor(minutes / 60)
+    .toString()
+    .padStart(2, '0');
   const mins = (minutes % 60).toString().padStart(2, '0');
   return `${hours}:${mins}`;
 }
