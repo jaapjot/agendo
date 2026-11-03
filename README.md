@@ -2,7 +2,7 @@
 
 **Online appointment booking for independent professionals.** Professionals publish their services and working hours; clients book a free slot from a shareable link, then cancel or reschedule within the professional's rules. Two people can never book the same time, even if they click at the same instant.
 
-![CI](https://github.com/OWNER/agendo/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/jaapjot/agendo/actions/workflows/ci.yml/badge.svg)
 ![License: MIT](https://img.shields.io/badge/license-MIT-teal.svg)
 
 ![Public booking page](docs/screenshots/booking.png)
@@ -190,7 +190,7 @@ DATABASE_URL=postgresql://agendo:agendo@localhost:5433/agendo npx tsx apps/api/p
 ### Option B — Local development
 
 ```bash
-git clone https://github.com/OWNER/agendo.git
+git clone https://github.com/jaapjot/agendo.git
 cd agendo
 npm install
 
